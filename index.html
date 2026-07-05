@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Loup-Garou YOPI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container" style="display:flex; flex-direction:column; justify-content:center; min-height:100vh;">
+    <div class="center" style="margin-bottom:28px;">
+      <div style="font-size:3rem; margin-bottom:6px;">🌕</div>
+      <h1>Loup-Garou</h1>
+      <p class="muted">Camp YOPI CAH</p>
+    </div>
+
+    <div class="card">
+      <label for="pin">Entre ton code à 4 chiffres</label>
+      <input type="tel" id="pin" inputmode="numeric" maxlength="4" placeholder="• • • •" autocomplete="off">
+      <button id="btn-connexion">Entrer dans le village</button>
+      <p id="erreur" class="muted center" style="color:var(--accent-blood-bright); display:none; margin-top:10px;"></p>
+    </div>
+
+    <p class="center muted" style="margin-top:10px;">
+      <a href="regles.html">Consulter les règlements</a>
+    </p>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

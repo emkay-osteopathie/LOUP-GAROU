@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Loup-Garou YOPI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-nav">
+      <span class="muted" id="nom-joueur">—</span>
+      <a href="regles.html">Règlements</a>
+    </div>
+
+    <div class="moon-tracker" id="moon-tracker"></div>
+
+    <div class="center" style="margin-bottom:14px;">
+      <span class="badge" id="badge-phase">—</span>
+    </div>
+
+    <div class="role-card" id="role-card">
+      <div class="role-card-inner">
+        <div class="role-face back">
+          <div class="role-symbol">🌑</div>
+          <p class="muted" style="margin:0;">Touche pour révéler ton rôle</p>
+        </div>
+        <div class="role-face front">
+          <div class="role-symbol" id="role-symbole">?</div>
+          <h2 id="role-label">—</h2>
+          <p class="muted" id="role-statut" style="margin-top:6px;"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="annonces-card" style="display:none;">
+      <h3 style="font-style:normal; color:var(--text-primary);">Annonce</h3>
+      <p id="annonces-texte" class="muted"></p>
+    </div>
+
+    <div id="zone-action"></div>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/joueur.js"></script>
+</body>
+</html>

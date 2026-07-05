@@ -1,0 +1,342 @@
+/* ==========================================================================
+   Loup-Garou YOPI — thème visuel
+   Un village au bord de la forêt, la nuit. La lune marque le temps qui passe :
+   8 rondes = 8 phases de lune, du croissant au plein et retour.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --bg-void: #0F1119;
+  --bg-panel: #1A1D2C;
+  --bg-panel-raised: #232739;
+  --bg-panel-hover: #2A2F44;
+
+  --text-primary: #EAE4D3;
+  --text-muted: #8B8FA6;
+  --text-faint: #565B72;
+
+  --accent-blood: #A6433D;
+  --accent-blood-bright: #C75A50;
+  --accent-moon: #E8C25D;
+  --accent-mystic: #6C7BB8;
+  --accent-good: #6B9A72;
+
+  --border-subtle: rgba(234, 228, 211, 0.09);
+  --border-strong: rgba(234, 228, 211, 0.18);
+
+  --shadow-deep: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg-void);
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(108, 123, 184, 0.12), transparent 60%),
+    radial-gradient(ellipse at 90% 100%, rgba(166, 67, 61, 0.08), transparent 55%);
+  color: var(--text-primary);
+  font-family: 'Public Sans', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, .display {
+  font-family: 'Spectral', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.3rem; }
+h3 { font-size: 1.05rem; color: var(--accent-moon); font-weight: 400; font-style: italic; }
+
+p { line-height: 1.55; color: var(--text-muted); }
+
+a { color: var(--accent-moon); }
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 18px 48px;
+  width: 100%;
+  flex: 1;
+}
+
+.container.wide { max-width: 900px; }
+
+/* ---- Bandeau lunaire : progression des rondes -------------------------- */
+
+.moon-tracker {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 6px 0 22px;
+  padding: 10px 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+}
+
+.moon-phase {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  position: relative;
+  background: var(--bg-void);
+  border: 1px solid var(--border-strong);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.moon-phase.past { background: var(--accent-moon); border-color: var(--accent-moon); opacity: 0.55; }
+.moon-phase.current {
+  background: var(--accent-moon);
+  border-color: var(--accent-moon);
+  box-shadow: 0 0 12px rgba(232, 194, 93, 0.7);
+}
+.moon-phase.current::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-moon);
+  opacity: 0.6;
+}
+
+/* ---- Cartes / panneaux ------------------------------------------------- */
+
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-deep);
+}
+
+.card.raised { background: var(--bg-panel-raised); }
+
+.badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(108, 123, 184, 0.18);
+  color: var(--accent-mystic);
+  border: 1px solid rgba(108, 123, 184, 0.35);
+}
+
+.badge.nuit { background: rgba(108, 123, 184, 0.18); color: var(--accent-mystic); border-color: rgba(108,123,184,0.35); }
+.badge.jour { background: rgba(232, 194, 93, 0.15); color: var(--accent-moon); border-color: rgba(232,194,93,0.35); }
+.badge.mort { background: rgba(166, 67, 61, 0.18); color: var(--accent-blood-bright); border-color: rgba(166,67,61,0.4); }
+.badge.vivant { background: rgba(107, 154, 114, 0.15); color: var(--accent-good); border-color: rgba(107,154,114,0.35); }
+
+/* ---- Formulaires -------------------------------------------------------- */
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+input[type="text"], input[type="password"], input[type="tel"], select {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-void);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent-moon);
+}
+
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--accent-blood);
+  color: #F4EFE4;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Public Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+button:hover, .btn:hover { background: var(--accent-blood-bright); }
+button:active { transform: scale(0.98); }
+
+button.secondary { background: var(--bg-panel-raised); color: var(--text-primary); border: 1px solid var(--border-strong); }
+button.secondary:hover { background: var(--bg-panel-hover); }
+
+button.moon { background: var(--accent-mystic); }
+button.moon:hover { background: #7C8CD1; }
+
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-row { display: flex; gap: 10px; }
+.btn-row button { margin-bottom: 0; }
+
+/* ---- Rôle : carte retournable ------------------------------------------- */
+
+.role-card {
+  perspective: 1000px;
+  height: 220px;
+  margin-bottom: 18px;
+}
+
+.role-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.role-card.flipped .role-card-inner { transform: rotateY(180deg); }
+
+.role-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  border: 1px solid var(--border-strong);
+}
+
+.role-face.back {
+  background: linear-gradient(160deg, var(--bg-panel-raised), var(--bg-void));
+}
+
+.role-face.front {
+  background: linear-gradient(160deg, var(--bg-panel-raised), var(--bg-panel));
+  transform: rotateY(180deg);
+}
+
+.role-symbol { font-size: 2.6rem; margin-bottom: 10px; }
+
+/* ---- Liste de joueurs ---------------------------------------------------- */
+
+.player-list { list-style: none; padding: 0; margin: 0; }
+
+.player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 10px;
+}
+
+.player-row:last-child { border-bottom: none; }
+
+.player-row.selectable { cursor: pointer; border-radius: 8px; transition: background 0.12s; }
+.player-row.selectable:hover { background: var(--bg-panel-hover); }
+.player-row.selected { background: rgba(232, 194, 93, 0.12); border: 1px solid var(--accent-moon); }
+.player-row.dead { opacity: 0.4; text-decoration: line-through; }
+
+.player-name { font-weight: 600; }
+.player-meta { font-size: 0.75rem; color: var(--text-faint); }
+
+/* ---- Historique / journal ------------------------------------------------ */
+
+.log-entry {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-round { color: var(--accent-moon); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+
+/* ---- Divers -------------------------------------------------------------- */
+
+.center { text-align: center; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.divider { height: 1px; background: var(--border-subtle); margin: 18px 0; border: none; }
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.top-nav a { font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
+.top-nav a:hover { color: var(--accent-moon); }
+
+.rules-section { margin-bottom: 22px; }
+.rules-section h2 { color: var(--accent-moon); margin-bottom: 8px; }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-faint);
+}
+
+.wolf-proposal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 6px 0;
+}
+
+.wolf-proposal .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-faint);
+}
+.wolf-proposal.agree .dot { background: var(--accent-good); }
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-deep);
+  z-index: 999;
+  max-width: 90%;
+  text-align: center;
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Admin — Loup-Garou YOPI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container wide">
+    <div class="top-nav">
+      <h1 style="font-size:1.3rem;">🌕 Tableau de bord — animateur</h1>
+      <a href="index.html">Quitter</a>
+    </div>
+
+    <div class="moon-tracker" id="moon-tracker"></div>
+    <p class="center"><span class="badge" id="badge-phase">—</span></p>
+
+    <!-- Configuration des joueurs -->
+    <div class="card" id="section-joueurs">
+      <h2>Joueurs inscrits (<span id="compte-joueurs">0</span>/17)</h2>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <input type="text" id="nouveau-nom" placeholder="Nom / surnom du joueur" style="text-align:left; letter-spacing:normal; font-family:inherit; font-size:0.95rem;">
+        <button id="btn-ajouter" style="width:auto; white-space:nowrap; padding:14px 20px;">Ajouter</button>
+      </div>
+      <ul class="player-list" id="liste-joueurs" style="margin-top:14px;"></ul>
+    </div>
+
+    <!-- Lancement de partie -->
+    <div class="card">
+      <h2>Partie</h2>
+      <button id="btn-lancer" class="moon" style="margin-top:12px;">Distribuer les rôles et commencer</button>
+      <button id="btn-reset" class="secondary" style="margin-top:10px;">Réinitialiser complètement la partie</button>
+    </div>
+
+    <!-- Contrôle de nuit -->
+    <div class="card" id="section-nuit" style="display:none;">
+      <h2>Nuit en cours — étape : <span id="etape-nuit">—</span></h2>
+      <div id="detail-nuit" class="muted" style="margin:12px 0;"></div>
+      <button id="btn-avancer-nuit" class="moon">Passer à l'étape suivante</button>
+    </div>
+
+    <!-- Contrôle de jour -->
+    <div class="card" id="section-jour" style="display:none;">
+      <h2>Vote du village</h2>
+      <ul class="player-list" id="liste-votes"></ul>
+      <button id="btn-resoudre-vote" class="moon" style="margin-top:12px;">Clore le vote et éliminer</button>
+      <p class="muted" style="margin-top:10px;">En cas d'égalité, choisis manuellement qui éliminer :</p>
+      <ul class="player-list" id="liste-vivants-jour"></ul>
+    </div>
+
+    <!-- Fin de partie -->
+    <div class="card" id="section-fin" style="display:none;">
+      <h2>Partie terminée</h2>
+      <p id="texte-fin" class="muted"></p>
+      <h3 style="font-style:normal; margin-top:14px;">Tous les rôles :</h3>
+      <ul class="player-list" id="liste-roles-finaux"></ul>
+    </div>
+
+    <!-- Historique -->
+    <div class="card">
+      <h2>Journal de partie</h2>
+      <div id="historique"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
