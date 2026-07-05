@@ -1,6 +1,6 @@
 # Loup-Garou YOPI 🌕
 
-Site web pour animer une partie de Loup-Garou entre animateurs (17 joueurs),
+Site web pour animer une partie de Loup-Garou entre animateurs (16 joueurs),
 avec connexion par code PIN, gestion des rôles, et suivi des rondes.
 
 Ce guide t'amène de zéro jusqu'à un site fonctionnel, sans rien connaître au
@@ -79,10 +79,10 @@ tu n'es pas à l'aise avec `git` :
 2. Entre le **code admin : `9999`** (tu peux le changer dans `js/login.js`,
    variable `ADMIN_PIN`, avant de mettre le site en ligne pour de vrai — évite
    que les joueurs devinent ce code).
-3. Dans le tableau de bord, ajoute les 17 joueurs un par un (leur nom ou
+3. Dans le tableau de bord, ajoute les 16 joueurs un par un (leur nom ou
    surnom de camp). Un code à 4 chiffres est généré automatiquement pour
    chacun — note-les ou prends une capture d'écran pour les distribuer.
-4. Une fois les 17 joueurs ajoutés, clique **"Distribuer les rôles et
+4. Une fois les 16 joueurs ajoutés, clique **"Distribuer les rôles et
    commencer"**.
 5. Chaque joueur se connecte avec son propre code sur son téléphone
    (`https://.../index.html`), voit son rôle, et agit à son tour selon les

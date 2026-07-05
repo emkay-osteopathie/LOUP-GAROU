@@ -12,14 +12,14 @@ const ROLES = {
   'villageois': { label: 'Villageois', symbole: '🌾', camp: 'village' }
 };
 
-// Répartition fixe pour 17 joueurs
+// Répartition fixe pour 16 joueurs
 const ROLE_COUNTS = {
   'loup-garou': 4,
   'voyante': 1,
   'cupidon': 1,
   'chasseur': 1,
   'sorciere': 1,
-  'villageois': 9
+  'villageois': 8
 };
 
 const MAX_ROUNDS = 8;
@@ -66,8 +66,8 @@ function nightStepsForRound(round) {
 
 async function assignerRolesEtDemarrer() {
   const players = await getAllPlayers();
-  if (players.length !== 17) {
-    throw new Error(`Il faut exactement 17 joueurs inscrits (actuellement ${players.length}).`);
+  if (players.length !== 16) {
+    throw new Error(`Il faut exactement 16 joueurs inscrits (actuellement ${players.length}).`);
   }
 
   const pool = [];
