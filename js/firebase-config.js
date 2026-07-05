@@ -9,12 +9,12 @@
 // ===========================================================================
 
 const firebaseConfig = {
-  apiKey: "REMPLACE_MOI",
-  authDomain: "REMPLACE_MOI.firebaseapp.com",
-  projectId: "REMPLACE_MOI",
-  storageBucket: "REMPLACE_MOI.appspot.com",
-  messagingSenderId: "REMPLACE_MOI",
-  appId: "REMPLACE_MOI"
+  apiKey: "AIzaSyBtlCWRN4ZiXVQG7FHCDt2r5y5vr7TtNDI",
+  authDomain: "loup-garou-b94c2.firebaseapp.com",
+  projectId: "loup-garou-b94c2",
+  storageBucket: "loup-garou-b94c2.firebasestorage.app",
+  messagingSenderId: "288885294637",
+  appId: "1:288885294637:web:a1d622d648a41ab1089aa4"
 };
 
 firebase.initializeApp(firebaseConfig);
