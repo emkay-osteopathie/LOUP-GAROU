@@ -29,6 +29,7 @@ const elNouveauNom = document.getElementById('nouveau-nom');
 
 const elSectionNuit = document.getElementById('section-nuit');
 const elEtapeNuit = document.getElementById('etape-nuit');
+const elMinuteurLoupsAdmin = document.getElementById('minuteur-loups-admin');
 const elDetailNuit = document.getElementById('detail-nuit');
 const elBtnAvancerNuit = document.getElementById('btn-avancer-nuit');
 
@@ -320,3 +321,29 @@ function renderFin() {
     elListeRolesFinaux.appendChild(li);
   });
 }
+
+// ---- Minuteur des loups (45 minutes) --------------------------------------
+
+function formatMinuteur(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+setInterval(() => {
+  if (etatJeu.phase === 'nuit' && etatJeu.nightStep === 'loups' && etatJeu.loupsTimerFin) {
+    const restant = etatJeu.loupsTimerFin - Date.now();
+    elMinuteurLoupsAdmin.style.display = 'block';
+    elMinuteurLoupsAdmin.textContent = restant > 0
+      ? `⏳ Temps restant pour les loups : ${formatMinuteur(restant)}`
+      : '⏳ Temps écoulé — résolution automatique en cours...';
+  } else {
+    elMinuteurLoupsAdmin.style.display = 'none';
+  }
+}, 1000);
+
+// Vérifie régulièrement si le temps des loups est écoulé
+setInterval(() => {
+  verifierExpirationTimerLoups();
+}, 5000);

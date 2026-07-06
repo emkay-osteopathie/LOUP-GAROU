@@ -8,12 +8,17 @@ let tousLesJoueurs = [];
 const elNom = document.getElementById('nom-joueur');
 const elMoonTracker = document.getElementById('moon-tracker');
 const elBadgePhase = document.getElementById('badge-phase');
+const elStatutTourCard = document.getElementById('statut-tour-card');
+const elStatutTourTexte = document.getElementById('statut-tour-texte');
+const elMinuteurLoups = document.getElementById('minuteur-loups-joueur');
 const elRoleCard = document.getElementById('role-card');
 const elRoleSymbole = document.getElementById('role-symbole');
 const elRoleLabel = document.getElementById('role-label');
 const elRoleStatut = document.getElementById('role-statut');
 const elAnnoncesCard = document.getElementById('annonces-card');
 const elAnnoncesTexte = document.getElementById('annonces-texte');
+const elComplicesCard = document.getElementById('complices-card');
+const elComplicesListe = document.getElementById('complices-liste');
 const elZoneAction = document.getElementById('zone-action');
 const elEtatVillageCard = document.getElementById('etat-village-card');
 const elEtatVillageListe = document.getElementById('etat-village-liste');
@@ -167,9 +172,32 @@ function render() {
   }
 
   renderAnnonce();
+  renderComplices();
+  renderStatutTour();
   renderZoneAction();
   renderEtatVillage();
   verifierMonTour();
+}
+
+function renderComplices() {
+  if (!moi || moi.role !== 'loup-garou' || !tousLesJoueurs.length) {
+    elComplicesCard.style.display = 'none';
+    return;
+  }
+  const autresLoups = tousLesJoueurs.filter(p => p.role === 'loup-garou' && p.id !== monPin);
+  elComplicesCard.style.display = 'block';
+  elComplicesListe.innerHTML = '';
+  if (autresLoups.length === 0) {
+    elComplicesListe.innerHTML = '<li class="player-row muted">Tu es le dernier loup...</li>';
+    return;
+  }
+  autresLoups.forEach(p => {
+    const li = document.createElement('li');
+    li.className = 'player-row' + (p.vivant ? '' : ' dead');
+    li.innerHTML = `<span class="player-name">${p.nom}</span>
+      <span class="badge ${p.vivant ? 'vivant' : 'mort'}">${p.vivant ? 'Vivant' : 'Mort'}</span>`;
+    elComplicesListe.appendChild(li);
+  });
 }
 
 function renderAnnonce() {
@@ -261,9 +289,7 @@ function renderActionNuit() {
   if (step === 'loups' && moi.role === 'loup-garou') return renderLoups();
   if (step === 'sorciere' && moi.role === 'sorciere') return renderSorciere();
 
-  const labels = { cupidon: 'Cupidon choisit les amoureux', voyante: 'la Voyante sonde un joueur',
-    loups: 'les Loups-Garous choisissent leur victime', sorciere: 'la Sorcière décide' };
-  elZoneAction.innerHTML = `<div class="empty-state">🌙 C'est le tour de ${labels[step] || '...'}.<br>Attends la suite en silence.</div>`;
+  elZoneAction.innerHTML = `<div class="empty-state">Ce n'est pas ton tour. Attends la suite en silence.</div>`;
 }
 
 function renderCupidon() {
@@ -545,3 +571,61 @@ refHistory().orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     elJournal.appendChild(div);
   });
 });
+
+// ---- Bandeau de statut : à qui c'est le tour, visible par tous ------------
+
+const LABELS_ETAPE = {
+  cupidon: '💘 Cupidon choisit les amoureux...',
+  voyante: '🔮 La Voyante sonde un joueur...',
+  loups: '🐺 Les Loups-Garous choisissent leur victime...',
+  sorciere: '🧪 La Sorcière décide...'
+};
+
+function renderStatutTour() {
+  if (!etatJeu || !etatJeu.started) { elStatutTourCard.style.display = 'none'; return; }
+
+  let texte = null;
+
+  if (etatJeu.tirChasseurEnAttente) {
+    const nomChasseur = tousLesJoueurs.find(p => p.id === etatJeu.tirChasseurEnAttente);
+    texte = `🏹 ${nomChasseur ? nomChasseur.nom : 'Le Chasseur'} doit tirer avant qu'on continue...`;
+  } else if (etatJeu.phase === 'nuit') {
+    texte = LABELS_ETAPE[etatJeu.nightStep] || 'La nuit avance...';
+  } else if (etatJeu.phase === 'jour') {
+    texte = '🗳️ Le village discute et vote...';
+  } else if (etatJeu.phase === 'termine') {
+    texte = '🏁 La partie est terminée.';
+  }
+
+  if (texte) {
+    elStatutTourCard.style.display = 'block';
+    elStatutTourTexte.textContent = texte;
+  } else {
+    elStatutTourCard.style.display = 'none';
+  }
+}
+
+// ---- Minuteur des loups (45 minutes) --------------------------------------
+
+function formatMinuteur(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+setInterval(() => {
+  if (etatJeu && etatJeu.phase === 'nuit' && etatJeu.nightStep === 'loups' && etatJeu.loupsTimerFin) {
+    const restant = etatJeu.loupsTimerFin - Date.now();
+    elMinuteurLoups.style.display = 'block';
+    elMinuteurLoups.textContent = restant > 0 ? `⏳ ${formatMinuteur(restant)}` : '⏳ Temps écoulé...';
+  } else {
+    elMinuteurLoups.style.display = 'none';
+  }
+}, 1000);
+
+// Vérifie régulièrement si le temps des loups est écoulé (peu importe le rôle
+// du joueur — n'importe quel appareil ouvert peut déclencher la résolution).
+setInterval(() => {
+  if (typeof verifierExpirationTimerLoups === 'function') verifierExpirationTimerLoups();
+}, 5000);

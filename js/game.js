@@ -143,6 +143,7 @@ async function cupidonDesignerAmoureux(id1, id2) {
   await refPlayer(id2).update({ amoureux: true, amoureuxId: id1 });
   await refNightActions().update({ cupidonCible1: id1, cupidonCible2: id2 });
   await ajouterHistorique(1, 'nuit', `Cupidon a formé un couple : ${p1.data().nom} 💘 ${p2.data().nom}.`);
+  await avancerEtapeNuit();
 }
 
 // ---- Passage à l'étape de nuit suivante ------------------------------------
@@ -153,11 +154,36 @@ async function avancerEtapeNuit() {
   const steps = nightStepsForRound(game.round);
   const idx = steps.indexOf(game.nightStep);
   if (idx < steps.length - 1) {
-    await refGame().update({ nightStep: steps[idx + 1] });
+    const prochaine = steps[idx + 1];
+    const update = { nightStep: prochaine };
+    if (prochaine === 'loups') {
+      update.loupsTimerFin = Date.now() + 45 * 60 * 1000; // 45 minutes
+    } else if (game.nightStep === 'loups') {
+      update.loupsTimerFin = null;
+    }
+    await refGame().update(update);
   } else {
+    if (game.nightStep === 'loups') {
+      await refGame().update({ loupsTimerFin: null });
+    }
     // Toutes les étapes de nuit sont faites : on résout la nuit
     await resoudreNuit();
   }
+}
+
+// Vérifie si le minuteur des loups est expiré ; si oui, force une décision au
+// hasard puis avance. Appelé périodiquement depuis joueur.js et admin.js.
+async function verifierExpirationTimerLoups() {
+  const gameSnap = await refGame().get();
+  const game = gameSnap.data();
+  if (!game || game.phase !== 'nuit' || game.nightStep !== 'loups' || !game.loupsTimerFin) return;
+  if (Date.now() < game.loupsTimerFin) return;
+
+  const naSnap = await refNightActions().get();
+  if (naSnap.data().loupsConsensus) return; // déjà résolu entre-temps
+
+  await forcerDecisionNuitAleatoire('loups');
+  await avancerEtapeNuit();
 }
 
 // ---- Résolution de la nuit (cascade des morts) -----------------------------
@@ -356,6 +382,7 @@ async function voyanteSonder(sondeurId, cibleId) {
   const gameSnap = await refGame().get();
   await ajouterHistorique(gameSnap.data().round, 'nuit',
     `La Voyante (${sondeur.data().nom}) a sondé ${cible.data().nom} → rôle : ${ROLES[role].label}.`);
+  await avancerEtapeNuit();
   return role;
 }
 
@@ -380,6 +407,7 @@ async function loupProposerCible(loupId, cibleId) {
       const gameSnap = await refGame().get();
       await ajouterHistorique(gameSnap.data().round, 'nuit',
         `Les Loups-Garous ont choisi comme cible : ${byId[consensus].nom}.`);
+      await avancerEtapeNuit();
     }
   }
 }
@@ -409,6 +437,7 @@ async function sorciereConfirmerPotionMort(sorciereId, cibleId) {
 // La sorcière signale qu'elle a terminé son tour (avec ou sans potion utilisée)
 async function sorciereTerminerTour(sorciereId) {
   await refNightActions().update({ sorciereTermine: true });
+  await avancerEtapeNuit();
 }
 
 // ---- Conditions de victoire -----------------------------------------------------
