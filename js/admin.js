@@ -230,13 +230,25 @@ function renderNuit() {
     } else if (step === 'sorciere') {
       const vieTxt = etatNuit.sorciereActionVie ? `Potion de vie utilisée sur ${nomDe(etatNuit.sorciereActionVie)}.` : 'Potion de vie non utilisée.';
       const mortTxt = etatNuit.sorciereActionMort ? `Potion de mort utilisée sur ${nomDe(etatNuit.sorciereActionMort)}.` : 'Potion de mort non utilisée.';
-      detail = `${vieTxt}<br>${mortTxt}`;
+      const termineTxt = etatNuit.sorciereTermine ? '<br><strong style="color:var(--accent-good);">✓ La Sorcière a terminé son tour.</strong>' : '<br>En attente de la Sorcière...';
+      detail = `${vieTxt}<br>${mortTxt}${termineTxt}`;
     }
   }
   elDetailNuit.innerHTML = detail;
 }
 
 elBtnAvancerNuit.addEventListener('click', async () => {
+  const step = etatJeu.nightStep;
+  if (!etapeNuitEstComplete(step, etatNuit)) {
+    const continuer = confirm(
+      'Cette étape n\'est pas encore terminée (personne n\'a pris de décision).\n\n' +
+      'Si tu continues, le système choisira une décision au hasard à la place du joueur concerné.\n\n' +
+      'Continuer quand même ?'
+    );
+    if (!continuer) return;
+    elBtnAvancerNuit.disabled = true;
+    await forcerDecisionNuitAleatoire(step);
+  }
   elBtnAvancerNuit.disabled = true;
   await avancerEtapeNuit();
 });
@@ -272,6 +284,17 @@ function renderJour() {
 }
 
 document.getElementById('btn-resoudre-vote').addEventListener('click', async () => {
+  const aucunVote = Object.keys(votesJour).length === 0;
+  if (aucunVote) {
+    const continuer = confirm(
+      'Personne n\'a encore voté.\n\n' +
+      'Si tu continues, le système éliminera un joueur au hasard.\n\n' +
+      'Continuer quand même ?'
+    );
+    if (!continuer) return;
+    await forcerVoteJourAleatoire();
+    return;
+  }
   await resoudreVoteJour();
 });
 

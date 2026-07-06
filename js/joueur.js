@@ -15,8 +15,90 @@ const elRoleStatut = document.getElementById('role-statut');
 const elAnnoncesCard = document.getElementById('annonces-card');
 const elAnnoncesTexte = document.getElementById('annonces-texte');
 const elZoneAction = document.getElementById('zone-action');
+const elEtatVillageCard = document.getElementById('etat-village-card');
+const elEtatVillageListe = document.getElementById('etat-village-liste');
+const elJournalCard = document.getElementById('journal-joueur-card');
+const elJournal = document.getElementById('journal-joueur');
 
 elRoleCard.addEventListener('click', () => elRoleCard.classList.toggle('flipped'));
+
+// ---- Alertes (son / vibration / notification) ------------------------------
+
+let audioCtx = null;
+let alertesActivees = false;
+let dernierTourAlerte = null;
+
+document.getElementById('btn-alertes').addEventListener('click', async () => {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    jouerSon(); // débloque l'audio sur mobile (nécessite un geste utilisateur)
+  } catch (e) { /* AudioContext non supporté */ }
+
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    try { await Notification.requestPermission(); } catch (e) { /* ignoré */ }
+  }
+
+  alertesActivees = true;
+  const btn = document.getElementById('btn-alertes');
+  btn.textContent = '🔔 Alertes activées';
+  btn.disabled = true;
+});
+
+function jouerSon() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function declencherAlerte(message) {
+  if (!alertesActivees) return;
+  try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { /* iOS ne supporte pas */ }
+  try { jouerSon(); } catch (e) { /* ignoré */ }
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🌕 Loup-Garou YOPI', { body: message || 'C\'est ton tour !' });
+    }
+  } catch (e) { /* ignoré */ }
+}
+
+// Vérifie si c'est le tour du joueur et déclenche l'alerte une seule fois par
+// changement d'étape (clé unique = ronde + phase + étape).
+function verifierMonTour() {
+  if (!moi || !etatJeu || !moi.vivant) return;
+
+  if (etatJeu.tirChasseurEnAttente === monPin) {
+    return signalerTour(`chasseur-${etatJeu.round}`, 'Tu dois tirer !');
+  }
+  if (etatJeu.phase === 'nuit') {
+    const step = etatJeu.nightStep;
+    const monRoleAgit =
+      (step === 'cupidon' && moi.role === 'cupidon') ||
+      (step === 'voyante' && moi.role === 'voyante') ||
+      (step === 'loups' && moi.role === 'loup-garou') ||
+      (step === 'sorciere' && moi.role === 'sorciere');
+    if (monRoleAgit) return signalerTour(`nuit-${etatJeu.round}-${step}`, 'C\'est ton tour cette nuit !');
+    return;
+  }
+  if (etatJeu.phase === 'jour') {
+    return signalerTour(`jour-${etatJeu.round}`, 'Le vote du village est ouvert !');
+  }
+}
+
+function signalerTour(cle, message) {
+  if (cle !== dernierTourAlerte) {
+    dernierTourAlerte = cle;
+    declencherAlerte(message);
+  }
+}
 
 // ---- Écoute temps réel -------------------------------------------------
 
@@ -86,6 +168,8 @@ function render() {
 
   renderAnnonce();
   renderZoneAction();
+  renderEtatVillage();
+  verifierMonTour();
 }
 
 function renderAnnonce() {
@@ -248,7 +332,7 @@ function renderVoyante() {
     li.textContent = p.nom;
     li.onclick = async () => {
       li.textContent = 'Vision en cours...';
-      await voyanteSonder(p.id);
+      await voyanteSonder(monPin, p.id);
     };
     ul.appendChild(li);
   });
@@ -309,6 +393,11 @@ function renderLoups() {
 }
 
 function renderSorciere() {
+  if (etatNuit && etatNuit.sorciereTermine) {
+    elZoneAction.innerHTML = `<div class="empty-state">🧪 Tour terminé. Attends la suite en silence.</div>`;
+    return;
+  }
+
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `<h3 style="font-style:normal;">🧪 Tes potions</h3>`;
@@ -365,14 +454,15 @@ function renderSorciere() {
     card.appendChild(p);
   }
 
-  const passer = document.createElement('button');
-  passer.textContent = 'Ne rien faire cette nuit';
-  passer.className = 'secondary';
-  passer.style.marginTop = '10px';
-  passer.onclick = () => {
-    elZoneAction.innerHTML = `<div class="empty-state">🧪 Attends la suite en silence.</div>`;
+  const terminer = document.createElement('button');
+  terminer.textContent = 'J\'ai terminé pour cette nuit';
+  terminer.className = 'secondary';
+  terminer.style.marginTop = '10px';
+  terminer.onclick = async () => {
+    terminer.disabled = true;
+    await sorciereTerminerTour(monPin);
   };
-  card.appendChild(passer);
+  card.appendChild(terminer);
 
   elZoneAction.appendChild(card);
 }
@@ -412,3 +502,46 @@ function renderActionJour() {
   }
   elZoneAction.appendChild(card);
 }
+
+// ---- État du village (vivants/morts) --------------------------------------
+
+function renderEtatVillage() {
+  if (!etatJeu || !etatJeu.started || !tousLesJoueurs.length) { elEtatVillageCard.style.display = 'none'; return; }
+  elEtatVillageCard.style.display = 'block';
+
+  // Les loups voient l'état réel en tout temps. Tout le monde d'autre voit
+  // seulement la dernière "photo" connue, mise à jour au lever du jour.
+  const estLoup = moi && moi.role === 'loup-garou';
+  const connu = etatJeu.vivantsConnus || {};
+
+  elEtatVillageListe.innerHTML = '';
+  [...tousLesJoueurs].sort((a, b) => a.nom.localeCompare(b.nom)).forEach(p => {
+    const estVivant = estLoup ? p.vivant : (connu[p.id] !== undefined ? connu[p.id] : true);
+    const li = document.createElement('li');
+    li.className = 'player-row' + (estVivant ? '' : ' dead');
+    li.innerHTML = `<span class="player-name">${p.nom}</span>
+      <span class="badge ${estVivant ? 'vivant' : 'mort'}">${estVivant ? 'Vivant' : 'Mort'}</span>`;
+    elEtatVillageListe.appendChild(li);
+  });
+}
+
+// ---- Journal de partie (événements publics seulement) ----------------------
+
+refHistory().orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
+  if (!etatJeu || !etatJeu.started) { elJournalCard.style.display = 'none'; return; }
+  elJournalCard.style.display = 'block';
+
+  const entriesPubliques = snap.docs.map(d => d.data()).filter(e => e.public);
+  elJournal.innerHTML = '';
+
+  if (entriesPubliques.length === 0) {
+    elJournal.innerHTML = '<p class="muted">Aucun événement pour l\'instant.</p>';
+    return;
+  }
+  entriesPubliques.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="log-round">RONDE ${e.round} · ${e.phase.toUpperCase()}</span><br>${e.texte}`;
+    elJournal.appendChild(div);
+  });
+});
