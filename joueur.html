@@ -10,7 +10,10 @@
   <div class="container">
     <div class="top-nav">
       <span class="muted" id="nom-joueur">—</span>
-      <a href="regles.html">Règlements</a>
+      <span>
+        <button id="btn-alertes" class="secondary" style="width:auto; padding:6px 12px; font-size:0.75rem; margin-right:8px;">🔔 Activer les alertes</button>
+        <a href="regles.html">Règlements</a>
+      </span>
     </div>
 
     <div class="moon-tracker" id="moon-tracker"></div>
@@ -39,6 +42,16 @@
     </div>
 
     <div id="zone-action"></div>
+
+    <div class="card" id="etat-village-card" style="display:none;">
+      <h3 style="font-style:normal; color:var(--text-primary);">État du village</h3>
+      <ul class="player-list" id="etat-village-liste"></ul>
+    </div>
+
+    <div class="card" id="journal-joueur-card" style="display:none;">
+      <h3 style="font-style:normal; color:var(--text-primary);">Journal de partie</h3>
+      <div id="journal-joueur"></div>
+    </div>
 
   </div>
 
