@@ -8,6 +8,8 @@ let tousLesJoueurs = [];
 const elNom = document.getElementById('nom-joueur');
 const elMoonTracker = document.getElementById('moon-tracker');
 const elBadgePhase = document.getElementById('badge-phase');
+const elStatutTourCard = document.getElementById('statut-tour-card');
+const elStatutTourTexte = document.getElementById('statut-tour-texte');
 const elRoleCard = document.getElementById('role-card');
 const elRoleSymbole = document.getElementById('role-symbole');
 const elRoleLabel = document.getElementById('role-label');
@@ -167,6 +169,7 @@ function render() {
   }
 
   renderAnnonce();
+  renderStatutTour();
   renderZoneAction();
   renderEtatVillage();
   verifierMonTour();
@@ -261,9 +264,7 @@ function renderActionNuit() {
   if (step === 'loups' && moi.role === 'loup-garou') return renderLoups();
   if (step === 'sorciere' && moi.role === 'sorciere') return renderSorciere();
 
-  const labels = { cupidon: 'Cupidon choisit les amoureux', voyante: 'la Voyante sonde un joueur',
-    loups: 'les Loups-Garous choisissent leur victime', sorciere: 'la Sorcière décide' };
-  elZoneAction.innerHTML = `<div class="empty-state">🌙 C'est le tour de ${labels[step] || '...'}.<br>Attends la suite en silence.</div>`;
+  elZoneAction.innerHTML = `<div class="empty-state">Ce n'est pas ton tour. Attends la suite en silence.</div>`;
 }
 
 function renderCupidon() {
@@ -393,6 +394,11 @@ function renderLoups() {
 }
 
 function renderSorciere() {
+  if (etatNuit && etatNuit.sorciereTermine) {
+    elZoneAction.innerHTML = `<div class="empty-state">🧪 Tour terminé. Attends la suite en silence.</div>`;
+    return;
+  }
+
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `<h3 style="font-style:normal;">🧪 Tes potions</h3>`;
@@ -449,14 +455,15 @@ function renderSorciere() {
     card.appendChild(p);
   }
 
-  const passer = document.createElement('button');
-  passer.textContent = 'Ne rien faire cette nuit';
-  passer.className = 'secondary';
-  passer.style.marginTop = '10px';
-  passer.onclick = () => {
-    elZoneAction.innerHTML = `<div class="empty-state">🧪 Attends la suite en silence.</div>`;
+  const terminer = document.createElement('button');
+  terminer.textContent = 'J\'ai terminé pour cette nuit';
+  terminer.className = 'secondary';
+  terminer.style.marginTop = '10px';
+  terminer.onclick = async () => {
+    terminer.disabled = true;
+    await sorciereTerminerTour(monPin);
   };
-  card.appendChild(passer);
+  card.appendChild(terminer);
 
   elZoneAction.appendChild(card);
 }
@@ -539,3 +546,36 @@ refHistory().orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
     elJournal.appendChild(div);
   });
 });
+
+// ---- Bandeau de statut : à qui c'est le tour, visible par tous ------------
+
+const LABELS_ETAPE = {
+  cupidon: '💘 Cupidon choisit les amoureux...',
+  voyante: '🔮 La Voyante sonde un joueur...',
+  loups: '🐺 Les Loups-Garous choisissent leur victime...',
+  sorciere: '🧪 La Sorcière décide...'
+};
+
+function renderStatutTour() {
+  if (!etatJeu || !etatJeu.started) { elStatutTourCard.style.display = 'none'; return; }
+
+  let texte = null;
+
+  if (etatJeu.tirChasseurEnAttente) {
+    const nomChasseur = tousLesJoueurs.find(p => p.id === etatJeu.tirChasseurEnAttente);
+    texte = `🏹 ${nomChasseur ? nomChasseur.nom : 'Le Chasseur'} doit tirer avant qu'on continue...`;
+  } else if (etatJeu.phase === 'nuit') {
+    texte = LABELS_ETAPE[etatJeu.nightStep] || 'La nuit avance...';
+  } else if (etatJeu.phase === 'jour') {
+    texte = '🗳️ Le village discute et vote...';
+  } else if (etatJeu.phase === 'termine') {
+    texte = '🏁 La partie est terminée.';
+  }
+
+  if (texte) {
+    elStatutTourCard.style.display = 'block';
+    elStatutTourTexte.textContent = texte;
+  } else {
+    elStatutTourCard.style.display = 'none';
+  }
+}
