@@ -16,6 +16,8 @@ const elRoleLabel = document.getElementById('role-label');
 const elRoleStatut = document.getElementById('role-statut');
 const elAnnoncesCard = document.getElementById('annonces-card');
 const elAnnoncesTexte = document.getElementById('annonces-texte');
+const elComplicesCard = document.getElementById('complices-card');
+const elComplicesListe = document.getElementById('complices-liste');
 const elZoneAction = document.getElementById('zone-action');
 const elEtatVillageCard = document.getElementById('etat-village-card');
 const elEtatVillageListe = document.getElementById('etat-village-liste');
@@ -169,10 +171,32 @@ function render() {
   }
 
   renderAnnonce();
+  renderComplices();
   renderStatutTour();
   renderZoneAction();
   renderEtatVillage();
   verifierMonTour();
+}
+
+function renderComplices() {
+  if (!moi || moi.role !== 'loup-garou' || !tousLesJoueurs.length) {
+    elComplicesCard.style.display = 'none';
+    return;
+  }
+  const autresLoups = tousLesJoueurs.filter(p => p.role === 'loup-garou' && p.id !== monPin);
+  elComplicesCard.style.display = 'block';
+  elComplicesListe.innerHTML = '';
+  if (autresLoups.length === 0) {
+    elComplicesListe.innerHTML = '<li class="player-row muted">Tu es le dernier loup...</li>';
+    return;
+  }
+  autresLoups.forEach(p => {
+    const li = document.createElement('li');
+    li.className = 'player-row' + (p.vivant ? '' : ' dead');
+    li.innerHTML = `<span class="player-name">${p.nom}</span>
+      <span class="badge ${p.vivant ? 'vivant' : 'mort'}">${p.vivant ? 'Vivant' : 'Mort'}</span>`;
+    elComplicesListe.appendChild(li);
+  });
 }
 
 function renderAnnonce() {
