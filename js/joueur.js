@@ -11,6 +11,7 @@ const elBadgePhase = document.getElementById('badge-phase');
 const elStatutTourCard = document.getElementById('statut-tour-card');
 const elStatutTourTexte = document.getElementById('statut-tour-texte');
 const elMinuteurLoups = document.getElementById('minuteur-loups-joueur');
+const elHoraireListe = document.getElementById('horaire-liste');
 const elRoleCard = document.getElementById('role-card');
 const elRoleSymbole = document.getElementById('role-symbole');
 const elRoleLabel = document.getElementById('role-label');
@@ -282,6 +283,12 @@ function renderTirChasseur() {
 // ---- Actions de nuit --------------------------------------------------------
 
 function renderActionNuit() {
+  if (!estDansPeriodeNuitAutorisee()) {
+    elZoneAction.innerHTML = `<div class="empty-state">🌙 Les actions de nuit sont seulement permises de 9h à 12h
+      et de 13h à 16h.<br>Reviens pendant ces heures pour jouer ton tour.</div>`;
+    return;
+  }
+
   const step = etatJeu.nightStep;
 
   if (step === 'cupidon' && moi.role === 'cupidon') return renderCupidon();
@@ -329,7 +336,13 @@ function renderCupidon() {
   btn.onclick = async () => {
     btn.disabled = true;
     btn.textContent = 'Confirmation...';
-    await cupidonDesignerAmoureux(selection[0], selection[1]);
+    try {
+      await cupidonDesignerAmoureux(selection[0], selection[1]);
+    } catch (e) {
+      alert(e.message);
+      btn.disabled = false;
+      btn.textContent = 'Former le couple';
+    }
   };
   card.appendChild(btn);
   elZoneAction.appendChild(card);
@@ -358,7 +371,12 @@ function renderVoyante() {
     li.textContent = p.nom;
     li.onclick = async () => {
       li.textContent = 'Vision en cours...';
-      await voyanteSonder(monPin, p.id);
+      try {
+        await voyanteSonder(monPin, p.id);
+      } catch (e) {
+        alert(e.message);
+        li.textContent = p.nom;
+      }
     };
     ul.appendChild(li);
   });
@@ -383,7 +401,11 @@ function renderLoups() {
     li.className = 'player-row selectable' + (mesCibleActuelle === p.id ? ' selected' : '');
     li.textContent = p.nom;
     li.onclick = async () => {
-      await loupProposerCible(monPin, p.id);
+      try {
+        await loupProposerCible(monPin, p.id);
+      } catch (e) {
+        alert(e.message);
+      }
     };
     ul.appendChild(li);
   });
@@ -444,7 +466,12 @@ function renderSorciere() {
     btnVie.style.marginBottom = '10px';
     btnVie.onclick = async () => {
       btnVie.disabled = true;
-      await sorciereConfirmerPotionVie(monPin);
+      try {
+        await sorciereConfirmerPotionVie(monPin);
+      } catch (e) {
+        alert(e.message);
+        btnVie.disabled = false;
+      }
     };
     card.appendChild(btnVie);
   } else if (moi.sorciereVieUtilisee) {
@@ -468,7 +495,12 @@ function renderSorciere() {
       li.textContent = p.nom;
       li.onclick = async () => {
         li.textContent = 'Confirmation...';
-        await sorciereConfirmerPotionMort(monPin, p.id);
+        try {
+          await sorciereConfirmerPotionMort(monPin, p.id);
+        } catch (e) {
+          alert(e.message);
+          li.textContent = p.nom;
+        }
       };
       ul.appendChild(li);
     });
@@ -486,7 +518,12 @@ function renderSorciere() {
   terminer.style.marginTop = '10px';
   terminer.onclick = async () => {
     terminer.disabled = true;
-    await sorciereTerminerTour(monPin);
+    try {
+      await sorciereTerminerTour(monPin);
+    } catch (e) {
+      alert(e.message);
+      terminer.disabled = false;
+    }
   };
   card.appendChild(terminer);
 
@@ -503,6 +540,12 @@ refDayVotes().onSnapshot(snap => {
 });
 
 function renderActionJour() {
+  if (!estDansPeriodeJourAutorisee()) {
+    elZoneAction.innerHTML = `<div class="empty-state">☀️ Le vote du village est seulement permis de 12h à 13h
+      et de 15h30 à 16h.<br>Reviens pendant ces heures pour voter.</div>`;
+    return;
+  }
+
   const cibles = tousLesJoueurs.filter(p => p.vivant && p.id !== monPin);
   const card = document.createElement('div');
   card.className = 'card';
@@ -514,7 +557,11 @@ function renderActionJour() {
     li.className = 'player-row selectable' + (dejaVote === p.id ? ' selected' : '');
     li.textContent = p.nom;
     li.onclick = async () => {
-      await voterJour(monPin, p.id);
+      try {
+        await voterJour(monPin, p.id);
+      } catch (e) {
+        alert(e.message);
+      }
     };
     ul.appendChild(li);
   });
@@ -614,6 +661,23 @@ function formatMinuteur(ms) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function renderHoraire() {
+  const blocActuel = blocHoraireActuel();
+  elHoraireListe.innerHTML = '';
+  HORAIRE.forEach(b => {
+    const estActuel = blocActuel && blocActuel.debut === b.debut;
+    const li = document.createElement('li');
+    li.className = 'player-row' + (estActuel ? ' selected' : '');
+    const icone = b.phase === 'nuit' ? '🌙' : '☀️';
+    li.innerHTML = `<span class="player-name">${icone} ${b.label}</span>
+      <span class="player-meta">${b.phase === 'nuit' ? 'Nuit' : 'Jour (vote)'}${estActuel ? ' · en cours' : ''}</span>`;
+    elHoraireListe.appendChild(li);
+  });
+}
+
+setInterval(renderHoraire, 30000);
+renderHoraire();
+
 setInterval(() => {
   if (etatJeu && etatJeu.phase === 'nuit' && etatJeu.nightStep === 'loups' && etatJeu.loupsTimerFin) {
     const restant = etatJeu.loupsTimerFin - Date.now();
@@ -629,3 +693,9 @@ setInterval(() => {
 setInterval(() => {
   if (typeof verifierExpirationTimerLoups === 'function') verifierExpirationTimerLoups();
 }, 5000);
+
+// Vérifie régulièrement si un bloc horaire (nuit/jour) vient de se terminer,
+// pour forcer automatiquement la suite de la partie.
+setInterval(() => {
+  if (typeof verifierHoraireEtForcerSiNecessaire === 'function') verifierHoraireEtForcerSiNecessaire();
+}, 10000);

@@ -347,3 +347,8 @@ setInterval(() => {
 setInterval(() => {
   verifierExpirationTimerLoups();
 }, 5000);
+
+// Vérifie régulièrement si un bloc horaire (nuit/jour) vient de se terminer
+setInterval(() => {
+  verifierHoraireEtForcerSiNecessaire();
+}, 10000);

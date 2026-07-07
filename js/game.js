@@ -64,6 +64,43 @@ function nightStepsForRound(round) {
     : ['voyante', 'loups', 'sorciere'];
 }
 
+// ---- Horaire quotidien de la partie ----------------------------------------
+// 09h00–12h00 : nuit   12h00–13h00 : jour (vote)
+// 13h00–15h30 : nuit   15h30–16h00 : jour (vote)
+// Ce cycle se répète chaque jour de camp jusqu'à la fin de la partie (8 rondes).
+
+const HORAIRE = [
+  { debut: 9,    fin: 12,   phase: 'nuit', label: '9h00 – 12h00' },
+  { debut: 12,   fin: 13,   phase: 'jour', label: '12h00 – 13h00' },
+  { debut: 13,   fin: 15.5, phase: 'nuit', label: '13h00 – 15h30' },
+  { debut: 15.5, fin: 16,   phase: 'jour', label: '15h30 – 16h00' }
+];
+
+function heureActuelleDecimale() {
+  const m = new Date();
+  return m.getHours() + m.getMinutes() / 60;
+}
+
+// Retourne le bloc horaire actuel ({phase, label}) ou null si on est hors des
+// heures de jeu (avant 9h, après 16h, ou l'heure du souper/soirée).
+function blocHoraireActuel() {
+  const h = heureActuelleDecimale();
+  return HORAIRE.find(b => h >= b.debut && h < b.fin) || null;
+}
+
+function estDansPeriodeNuitAutorisee() {
+  const bloc = blocHoraireActuel();
+  return !!bloc && bloc.phase === 'nuit';
+}
+
+function estDansPeriodeJourAutorisee() {
+  const bloc = blocHoraireActuel();
+  return !!bloc && bloc.phase === 'jour';
+}
+
+const MESSAGE_HORS_PERIODE = 'Les actions de nuit sont seulement permises de 9h à 12h et de 13h à 15h30.';
+const MESSAGE_HORS_PERIODE_JOUR = 'Le vote du village est seulement permis de 12h à 13h et de 15h30 à 16h.';
+
 // Prend une "photo" de qui est vivant/mort à l'instant présent. C'est cette
 // photo (et non le statut en temps réel) qui est montrée aux villageois et
 // rôles spéciaux — seuls les loups voient l'état réel en tout temps.
@@ -138,11 +175,13 @@ async function assignerRolesEtDemarrer() {
 // ---- Cupidon : désigne les 2 amoureux (nuit 1 seulement) -------------------
 
 async function cupidonDesignerAmoureux(id1, id2) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   const [p1, p2] = await Promise.all([refPlayer(id1).get(), refPlayer(id2).get()]);
   await refPlayer(id1).update({ amoureux: true, amoureuxId: id2 });
   await refPlayer(id2).update({ amoureux: true, amoureuxId: id1 });
   await refNightActions().update({ cupidonCible1: id1, cupidonCible2: id2 });
   await ajouterHistorique(1, 'nuit', `Cupidon a formé un couple : ${p1.data().nom} 💘 ${p2.data().nom}.`);
+  await ajouterHistorique(1, 'nuit', 'Cupidon a terminé son tour.', true);
   await avancerEtapeNuit();
 }
 
@@ -326,6 +365,7 @@ async function continuerApresMorts(round, phaseOrigine) {
 // ---- Vote de jour -----------------------------------------------------------
 
 async function voterJour(votantId, cibleId) {
+  if (!estDansPeriodeJourAutorisee()) throw new Error(MESSAGE_HORS_PERIODE_JOUR);
   await refDayVotes().update({ [`votes.${votantId}`]: cibleId });
 }
 
@@ -376,12 +416,14 @@ async function resoudreVoteJourManuel(cibleId) {
 // ---- Voyante ----------------------------------------------------------------
 
 async function voyanteSonder(sondeurId, cibleId) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   const [sondeur, cible] = await Promise.all([refPlayer(sondeurId).get(), refPlayer(cibleId).get()]);
   const role = cible.data().role;
   await refNightActions().update({ voyanteCible: cibleId, voyanteResultat: role });
   const gameSnap = await refGame().get();
   await ajouterHistorique(gameSnap.data().round, 'nuit',
     `La Voyante (${sondeur.data().nom}) a sondé ${cible.data().nom} → rôle : ${ROLES[role].label}.`);
+  await ajouterHistorique(gameSnap.data().round, 'nuit', 'La Voyante a fait son choix.', true);
   await avancerEtapeNuit();
   return role;
 }
@@ -389,6 +431,7 @@ async function voyanteSonder(sondeurId, cibleId) {
 // ---- Loups (consensus) --------------------------------------------------------
 
 async function loupProposerCible(loupId, cibleId) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   await refNightActions().update({ [`loupsCibles.${loupId}`]: cibleId });
 
   // Vérifie si tous les loups vivants ont proposé la même cible
@@ -407,6 +450,7 @@ async function loupProposerCible(loupId, cibleId) {
       const gameSnap = await refGame().get();
       await ajouterHistorique(gameSnap.data().round, 'nuit',
         `Les Loups-Garous ont choisi comme cible : ${byId[consensus].nom}.`);
+      await ajouterHistorique(gameSnap.data().round, 'nuit', 'Les Loups-Garous ont terminé leur tour.', true);
       await avancerEtapeNuit();
     }
   }
@@ -415,6 +459,7 @@ async function loupProposerCible(loupId, cibleId) {
 // ---- Sorcière -----------------------------------------------------------------
 
 async function sorciereConfirmerPotionVie(sorciereId) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   const naSnap = await refNightActions().get();
   const cibleLoups = naSnap.data().loupsConsensus;
   const [sorciere, cible] = await Promise.all([refPlayer(sorciereId).get(), refPlayer(cibleLoups).get()]);
@@ -426,6 +471,7 @@ async function sorciereConfirmerPotionVie(sorciereId) {
 }
 
 async function sorciereConfirmerPotionMort(sorciereId, cibleId) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   const [sorciere, cible] = await Promise.all([refPlayer(sorciereId).get(), refPlayer(cibleId).get()]);
   await refNightActions().update({ sorciereActionMort: cibleId });
   await refPlayer(sorciereId).update({ sorciereMortUtilisee: true });
@@ -436,7 +482,10 @@ async function sorciereConfirmerPotionMort(sorciereId, cibleId) {
 
 // La sorcière signale qu'elle a terminé son tour (avec ou sans potion utilisée)
 async function sorciereTerminerTour(sorciereId) {
+  if (!estDansPeriodeNuitAutorisee()) throw new Error(MESSAGE_HORS_PERIODE);
   await refNightActions().update({ sorciereTermine: true });
+  const gameSnap = await refGame().get();
+  await ajouterHistorique(gameSnap.data().round, 'nuit', 'La Sorcière a terminé son tour.', true);
   await avancerEtapeNuit();
 }
 
@@ -473,26 +522,38 @@ function etapeNuitEstComplete(step, etatNuit) {
   return true;
 }
 
-// Force une décision au hasard pour l'étape de nuit en cours, si personne n'a agi.
+// Force une décision au hasard pour l'étape de nuit en cours, si personne n'a
+// agi. Manipule directement Firestore (plutôt que les fonctions de joueur)
+// pour pouvoir s'exécuter même hors des heures permises aux joueurs, puisque
+// c'est ici le système qui agit à leur place, pas un joueur.
 async function forcerDecisionNuitAleatoire(step) {
   const players = await getAllPlayers();
   const vivants = players.filter(p => p.vivant);
   const gameSnap = await refGame().get();
   const round = gameSnap.data().round;
+  const byId = Object.fromEntries(players.map(p => [p.id, p]));
 
   if (step === 'cupidon') {
     const candidats = shuffle(vivants);
     if (candidats.length >= 2) {
-      await ajouterHistorique(round, 'nuit', 'Cupidon n\'a pas décidé à temps : couple choisi au hasard par le système.');
-      await cupidonDesignerAmoureux(candidats[0].id, candidats[1].id);
+      const id1 = candidats[0].id, id2 = candidats[1].id;
+      await refPlayer(id1).update({ amoureux: true, amoureuxId: id2 });
+      await refPlayer(id2).update({ amoureux: true, amoureuxId: id1 });
+      await refNightActions().update({ cupidonCible1: id1, cupidonCible2: id2 });
+      await ajouterHistorique(round, 'nuit',
+        `Cupidon n'a pas décidé à temps : couple choisi au hasard par le système (${candidats[0].nom} 💘 ${candidats[1].nom}).`);
+      await ajouterHistorique(round, 'nuit', 'Cupidon a terminé son tour.', true);
     }
   } else if (step === 'voyante') {
     const voyante = players.find(p => p.role === 'voyante' && p.vivant);
     if (voyante) {
       const cibles = shuffle(vivants.filter(p => p.id !== voyante.id));
       if (cibles.length > 0) {
-        await ajouterHistorique(round, 'nuit', 'La Voyante n\'a pas décidé à temps : cible choisie au hasard par le système.');
-        await voyanteSonder(voyante.id, cibles[0].id);
+        const cible = cibles[0];
+        await refNightActions().update({ voyanteCible: cible.id, voyanteResultat: cible.role });
+        await ajouterHistorique(round, 'nuit',
+          `La Voyante n'a pas décidé à temps : cible choisie au hasard par le système (${cible.nom} → ${ROLES[cible.role].label}).`);
+        await ajouterHistorique(round, 'nuit', 'La Voyante a fait son choix.', true);
       }
     }
   } else if (step === 'loups') {
@@ -503,6 +564,7 @@ async function forcerDecisionNuitAleatoire(step) {
         await refNightActions().update({ loupsConsensus: cibles[0].id });
         await ajouterHistorique(round, 'nuit',
           `Les Loups-Garous ne se sont pas entendus à temps : cible choisie au hasard par le système (${cibles[0].nom}).`);
+        await ajouterHistorique(round, 'nuit', 'Les Loups-Garous ont terminé leur tour.', true);
       }
     }
   } else if (step === 'sorciere') {
@@ -511,18 +573,26 @@ async function forcerDecisionNuitAleatoire(step) {
       const naSnap = await refNightActions().get();
       const na = naSnap.data();
       if (!sorciere.sorciereVieUtilisee && na.loupsConsensus && Math.random() < 0.5) {
-        await ajouterHistorique(round, 'nuit', 'La Sorcière n\'a pas décidé à temps : potion de vie utilisée au hasard par le système.');
-        await sorciereConfirmerPotionVie(sorciere.id);
+        await refNightActions().update({ sorciereActionVie: na.loupsConsensus });
+        await refPlayer(sorciere.id).update({ sorciereVieUtilisee: true });
+        const cible = byId[na.loupsConsensus];
+        await ajouterHistorique(round, 'nuit',
+          `La Sorcière n'a pas décidé à temps : potion de vie utilisée au hasard par le système sur ${cible ? cible.nom : '???'}.`);
       }
       if (!sorciere.sorciereMortUtilisee && Math.random() < 0.5) {
         const cibles = shuffle(vivants.filter(p => p.id !== sorciere.id));
         if (cibles.length > 0) {
-          await ajouterHistorique(round, 'nuit', 'La Sorcière n\'a pas décidé à temps : potion de mort utilisée au hasard par le système.');
-          await sorciereConfirmerPotionMort(sorciere.id, cibles[0].id);
+          await refNightActions().update({ sorciereActionMort: cibles[0].id });
+          await refPlayer(sorciere.id).update({ sorciereMortUtilisee: true });
+          await ajouterHistorique(round, 'nuit',
+            `La Sorcière n'a pas décidé à temps : potion de mort utilisée au hasard par le système sur ${cibles[0].nom}.`);
         }
       }
+      await refNightActions().update({ sorciereTermine: true });
+      await ajouterHistorique(round, 'nuit', 'La Sorcière a terminé son tour.', true);
+    } else {
+      await refNightActions().update({ sorciereTermine: true });
     }
-    await refNightActions().update({ sorciereTermine: true });
   }
 }
 
@@ -535,5 +605,56 @@ async function forcerVoteJourAleatoire() {
   if (vivants.length > 0) {
     await ajouterHistorique(round, 'jour', 'Personne n\'a voté à temps : joueur éliminé au hasard par le système.', true);
     await appliquerMortsEtCascade(new Set([vivants[0].id]), round, 'jour');
+  }
+}
+
+// ---- Résolution automatique quand un bloc horaire se termine ---------------
+
+// Force toutes les étapes de nuit restantes (au hasard si besoin) jusqu'à
+// atteindre le jour, parce que la fenêtre de nuit (9h-12h ou 13h-15h30) vient
+// de se terminer.
+async function forcerResolutionNuitComplete() {
+  for (let i = 0; i < 6; i++) {
+    const gameSnap = await refGame().get();
+    const game = gameSnap.data();
+    if (!game || game.phase !== 'nuit') return; // déjà rendu au jour, ou partie terminée
+    const naSnap = await refNightActions().get();
+    if (!etapeNuitEstComplete(game.nightStep, naSnap.data())) {
+      await forcerDecisionNuitAleatoire(game.nightStep);
+    }
+    await avancerEtapeNuit();
+  }
+}
+
+// Force le résultat du vote de jour parce que la fenêtre de jour (12h-13h ou
+// 15h30-16h) vient de se terminer.
+async function forcerResolutionJourComplete() {
+  const gameSnap = await refGame().get();
+  const game = gameSnap.data();
+  if (!game || game.phase !== 'jour') return;
+  const dvSnap = await refDayVotes().get();
+  const votes = (dvSnap.data() || {}).votes || {};
+  if (Object.keys(votes).length === 0) {
+    await forcerVoteJourAleatoire();
+  } else {
+    await resoudreVoteJour();
+  }
+}
+
+// Point d'entrée appelé toutes les quelques secondes depuis joueur.js et
+// admin.js : compare la phase attendue selon l'horloge à la phase réelle du
+// jeu, et force la suite si le bloc horaire est dépassé.
+async function verifierHoraireEtForcerSiNecessaire() {
+  const gameSnap = await refGame().get();
+  const game = gameSnap.data();
+  if (!game || !game.started || game.termine) return;
+
+  const bloc = blocHoraireActuel();
+  if (!bloc) return; // hors des heures de camp (soir, avant 9h, etc.) : on ne force rien
+
+  if (bloc.phase === 'jour' && game.phase === 'nuit') {
+    await forcerResolutionNuitComplete();
+  } else if (bloc.phase === 'nuit' && game.phase === 'jour') {
+    await forcerResolutionJourComplete();
   }
 }
