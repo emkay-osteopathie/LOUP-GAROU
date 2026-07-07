@@ -10,7 +10,8 @@ const RESERVED_PINS = ['9999'];
   if (!snap.exists) {
     await refGame().set({
       phase: 'lobby', round: 0, nightStep: null, dayStep: null,
-      started: false, termine: false, winner: null, lastDeaths: [], tirChasseurEnAttente: null
+      started: false, termine: false, winner: null, lastDeaths: [], tirChasseurEnAttente: null,
+      verrouForcage: false, verrouForcageTs: null
     });
   }
 })();
@@ -90,7 +91,8 @@ document.getElementById('btn-reset').addEventListener('click', async () => {
   await batch.commit();
   await refGame().set({
     phase: 'lobby', round: 0, nightStep: null, dayStep: null,
-    started: false, termine: false, winner: null, lastDeaths: [], tirChasseurEnAttente: null
+    started: false, termine: false, winner: null, lastDeaths: [], tirChasseurEnAttente: null,
+    verrouForcage: false, verrouForcageTs: null
   });
   await refNightActions().set({});
   await refDayVotes().set({ votes: {} });
@@ -346,9 +348,9 @@ setInterval(() => {
 // Vérifie régulièrement si le temps des loups est écoulé
 setInterval(() => {
   verifierExpirationTimerLoups();
-}, 5000);
+}, 20000);
 
 // Vérifie régulièrement si un bloc horaire (nuit/jour) vient de se terminer
 setInterval(() => {
   verifierHoraireEtForcerSiNecessaire();
-}, 10000);
+}, 60000);

@@ -153,6 +153,8 @@ async function assignerRolesEtDemarrer() {
     lastDeaths: [],
     mortsEnCours: [],
     tirChasseurEnAttente: null,
+    verrouForcage: false,
+    verrouForcageTs: null,
     vivantsConnus
   });
 
@@ -190,6 +192,7 @@ async function cupidonDesignerAmoureux(id1, id2) {
 async function avancerEtapeNuit() {
   const gameSnap = await refGame().get();
   const game = gameSnap.data();
+  if (game.phase !== 'nuit') return; // sécurité : rien à avancer si on n'est plus en nuit
   const steps = nightStepsForRound(game.round);
   const idx = steps.indexOf(game.nightStep);
   if (idx < steps.length - 1) {
@@ -221,8 +224,15 @@ async function verifierExpirationTimerLoups() {
   const naSnap = await refNightActions().get();
   if (naSnap.data().loupsConsensus) return; // déjà résolu entre-temps
 
-  await forcerDecisionNuitAleatoire('loups');
-  await avancerEtapeNuit();
+  const verrouObtenu = await tenterAcquerirVerrou();
+  if (!verrouObtenu) return;
+
+  try {
+    await forcerDecisionNuitAleatoire('loups');
+    await avancerEtapeNuit();
+  } finally {
+    await relacherVerrou();
+  }
 }
 
 // ---- Résolution de la nuit (cascade des morts) -----------------------------
@@ -652,9 +662,50 @@ async function verifierHoraireEtForcerSiNecessaire() {
   const bloc = blocHoraireActuel();
   if (!bloc) return; // hors des heures de camp (soir, avant 9h, etc.) : on ne force rien
 
-  if (bloc.phase === 'jour' && game.phase === 'nuit') {
-    await forcerResolutionNuitComplete();
-  } else if (bloc.phase === 'nuit' && game.phase === 'jour') {
-    await forcerResolutionJourComplete();
+  const decalageNuitVersJour = bloc.phase === 'jour' && game.phase === 'nuit';
+  const decalageJourVersNuit = bloc.phase === 'nuit' && game.phase === 'jour';
+  if (!decalageNuitVersJour && !decalageJourVersNuit) return;
+
+  // Plusieurs téléphones peuvent détecter ce décalage presque en même temps.
+  // Le verrou garantit qu'un seul d'entre eux agit réellement.
+  const verrouObtenu = await tenterAcquerirVerrou();
+  if (!verrouObtenu) return;
+
+  try {
+    if (decalageNuitVersJour) {
+      await forcerResolutionNuitComplete();
+    } else if (decalageJourVersNuit) {
+      await forcerResolutionJourComplete();
+    }
+  } finally {
+    await relacherVerrou();
   }
+}
+
+// ---- Verrou anti-conflit (plusieurs téléphones ouverts en même temps) -----
+// Utilise une transaction Firestore pour garantir qu'un seul appareil à la
+// fois peut forcer une résolution automatique. Le verrou expire tout seul
+// après 30 secondes au cas où un appareil plante en plein milieu.
+
+async function tenterAcquerirVerrou() {
+  try {
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(refGame());
+      const data = snap.data();
+      const maintenant = Date.now();
+      const verrouActif = data.verrouForcage && data.verrouForcageTs &&
+        (maintenant - data.verrouForcageTs < 30000);
+      if (verrouActif) return false;
+      tx.update(refGame(), { verrouForcage: true, verrouForcageTs: maintenant });
+      return true;
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+async function relacherVerrou() {
+  try {
+    await refGame().update({ verrouForcage: false, verrouForcageTs: null });
+  } catch (e) { /* ignoré */ }
 }

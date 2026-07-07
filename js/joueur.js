@@ -632,10 +632,13 @@ function renderStatutTour() {
   if (!etatJeu || !etatJeu.started) { elStatutTourCard.style.display = 'none'; return; }
 
   let texte = null;
+  const bloc = blocHoraireActuel();
 
   if (etatJeu.tirChasseurEnAttente) {
     const nomChasseur = tousLesJoueurs.find(p => p.id === etatJeu.tirChasseurEnAttente);
     texte = `🏹 ${nomChasseur ? nomChasseur.nom : 'Le Chasseur'} doit tirer avant qu'on continue...`;
+  } else if (!bloc) {
+    texte = '💤 Hors des heures de jeu. Reviens de 9h à 12h ou de 13h à 15h30 (nuit), ou de 12h à 13h ou de 15h30 à 16h (jour).';
   } else if (etatJeu.phase === 'nuit') {
     texte = LABELS_ETAPE[etatJeu.nightStep] || 'La nuit avance...';
   } else if (etatJeu.phase === 'jour') {
@@ -692,10 +695,10 @@ setInterval(() => {
 // du joueur — n'importe quel appareil ouvert peut déclencher la résolution).
 setInterval(() => {
   if (typeof verifierExpirationTimerLoups === 'function') verifierExpirationTimerLoups();
-}, 5000);
+}, 20000);
 
 // Vérifie régulièrement si un bloc horaire (nuit/jour) vient de se terminer,
 // pour forcer automatiquement la suite de la partie.
 setInterval(() => {
   if (typeof verifierHoraireEtForcerSiNecessaire === 'function') verifierHoraireEtForcerSiNecessaire();
-}, 10000);
+}, 60000);
